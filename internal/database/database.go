@@ -22,8 +22,12 @@ func Open(dbPath string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("open sqlite database: %w", err)
 	}
 
-	if err := db.AutoMigrate(&models.Role{}); err != nil {
+	if err := db.AutoMigrate(&models.Kelas{}); err != nil {
 		return nil, fmt.Errorf("auto migrate role: %w", err)
+	}
+
+	if err := db.AutoMigrate(&models.Jurusan{}); err != nil {
+		return nil, fmt.Errorf("auto migrate jurusan: %w", err)
 	}
 
 	return db, nil

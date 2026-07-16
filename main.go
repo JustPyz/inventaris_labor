@@ -19,11 +19,15 @@ func main() {
 		log.Fatalf("failed to open database: %v", err)
 	}
 
-	roleRepository := repositories.NewRoleRepository(db)
-	roleService := services.NewRoleService(roleRepository)
-	roleHandler := handlers.NewRoleHandler(roleService)
+	kelasRepository := repositories.NewKelasRepository(db)
+	kelasService := services.NewKelasService(kelasRepository)
+	kelasHandler := handlers.NewKelasHandler(kelasService)
 
-	engine := router.New(cfg, db, roleHandler)
+	jurusanRepository := repositories.NewJurusanRepository(db)
+	jurusanService := services.NewJurusanService(jurusanRepository)
+	jurusanHandler := handlers.NewJurusanHandler(jurusanService)
+
+	engine := router.New(cfg, db, kelasHandler, jurusanHandler)
 
 	if err := engine.Run(":" + cfg.Port); err != nil {
 		log.Printf("server stopped: %v", err)

@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func New(cfg config.Config, db *gorm.DB, roleHandler *handlers.RoleHandler) *gin.Engine {
+func New(cfg config.Config, db *gorm.DB, kelasHandler *handlers.KelasHandler, jurusanHandler *handlers.JurusanHandler) *gin.Engine {
 	if gin.Mode() == gin.DebugMode {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -46,11 +46,20 @@ func New(cfg config.Config, db *gorm.DB, roleHandler *handlers.RoleHandler) *gin
 	{
 		roles := api.Group("/roles")
 		{
-			roles.GET("", roleHandler.List)
-			roles.POST("", roleHandler.Create)
-			roles.GET("/:id", roleHandler.Get)
-			roles.PUT("/:id", roleHandler.Update)
-			roles.DELETE("/:id", roleHandler.Delete)
+			roles.GET("", kelasHandler.List)
+			roles.POST("", kelasHandler.Create)
+			roles.GET("/:id", kelasHandler.Get)
+			roles.PUT("/:id", kelasHandler.Update)
+			roles.DELETE("/:id", kelasHandler.Delete)
+		}
+
+		jurusan := api.Group("/jurusan")
+		{
+			jurusan.GET("", jurusanHandler.List)
+			jurusan.POST("", jurusanHandler.Create)
+			jurusan.GET("/:id", jurusanHandler.Get)
+			jurusan.PUT("/:id", jurusanHandler.Update)
+			jurusan.DELETE("/:id", jurusanHandler.Delete)
 		}
 	}
 
