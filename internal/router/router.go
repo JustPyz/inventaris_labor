@@ -6,17 +6,19 @@ import (
 
 	"invela-be/internal/config"
 	"invela-be/internal/handlers"
+	"invela-be/internal/middlewares"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-func New(cfg config.Config, db *gorm.DB, kelasHandler *handlers.KelasHandler, jurusanHandler *handlers.JurusanHandler) *gin.Engine {
+func New(cfg config.Config, db *gorm.DB, kelasHandler *handlers.KelasHandler, jurusanHandler *handlers.JurusanHandler, userHandler *handlers.UserHandler) *gin.Engine {
 	if gin.Mode() == gin.DebugMode {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	router := gin.Default()
+	router.Use(middlewares.CORS())
 
 	router.GET("/health", func(c *gin.Context) {
 		status := "ok"
@@ -42,9 +44,9 @@ func New(cfg config.Config, db *gorm.DB, kelasHandler *handlers.KelasHandler, ju
 		})
 	})
 
-	api := router.Group("/api/v1")
+	api := router.Group("/api")
 	{
-		roles := api.Group("/roles")
+		roles := api.Group("/kelas")
 		{
 			roles.GET("", kelasHandler.List)
 			roles.POST("", kelasHandler.Create)
@@ -60,6 +62,15 @@ func New(cfg config.Config, db *gorm.DB, kelasHandler *handlers.KelasHandler, ju
 			jurusan.GET("/:id", jurusanHandler.Get)
 			jurusan.PUT("/:id", jurusanHandler.Update)
 			jurusan.DELETE("/:id", jurusanHandler.Delete)
+		}
+
+		users := api.Group("/user")
+		{
+			users.GET("", userHandler.List)
+			users.POST("", userHandler.Create)
+			users.GET("/:id", userHandler.Get)
+			users.PATCH("/:id", userHandler.Update)
+			users.DELETE("/:id", userHandler.Delete)
 		}
 	}
 

@@ -27,7 +27,11 @@ func main() {
 	jurusanService := services.NewJurusanService(jurusanRepository)
 	jurusanHandler := handlers.NewJurusanHandler(jurusanService)
 
-	engine := router.New(cfg, db, kelasHandler, jurusanHandler)
+	userRepository := repositories.NewUserRepository(db)
+	userService := services.NewUserService(userRepository)
+	userHandler := handlers.NewUserHandler(userService)
+
+	engine := router.New(cfg, db, kelasHandler, jurusanHandler, userHandler)
 
 	if err := engine.Run(":" + cfg.Port); err != nil {
 		log.Printf("server stopped: %v", err)
