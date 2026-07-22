@@ -3,8 +3,9 @@ package config
 import "os"
 
 type Config struct {
-	Port   string
-	DBPath string
+	Port      string
+	DBPath    string
+	JWTSecret string
 }
 
 func Load() Config {
@@ -18,8 +19,14 @@ func Load() Config {
 		dbPath = "data/app.db"
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "invela-secret-key-change-in-production"
+	}
+
 	return Config{
-		Port:   port,
-		DBPath: dbPath,
+		Port:      port,
+		DBPath:    dbPath,
+		JWTSecret: jwtSecret,
 	}
 }

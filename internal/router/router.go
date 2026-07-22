@@ -12,7 +12,21 @@ import (
 	"gorm.io/gorm"
 )
 
-func New(cfg config.Config, db *gorm.DB, kelasHandler *handlers.KelasHandler, jurusanHandler *handlers.JurusanHandler, userHandler *handlers.UserHandler) *gin.Engine {
+func New(
+	cfg config.Config,
+	db *gorm.DB,
+	authHandler *handlers.AuthHandler,
+	kelasHandler *handlers.KelasHandler,
+	jurusanHandler *handlers.JurusanHandler,
+	userHandler *handlers.UserHandler,
+	perangkatHandler *handlers.PerangkatHandler,
+	kategoriHandler *handlers.KategoriHandler,
+	laborHandler *handlers.LaborHandler,
+	itemInstanceHandler *handlers.ItemInstanceHandler,
+	peminjamanHandler *handlers.PeminjamanHandler,
+	penggunaanHandler *handlers.PenggunaanHandler,
+	kerusakanHandler *handlers.KerusakanHandler,
+) *gin.Engine {
 	if gin.Mode() == gin.DebugMode {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -46,31 +60,114 @@ func New(cfg config.Config, db *gorm.DB, kelasHandler *handlers.KelasHandler, ju
 
 	api := router.Group("/api")
 	{
-		roles := api.Group("/kelas")
+		// ── Public: Login (tidak butuh token) ──────────────────────────────
+		auth := api.Group("/auth")
 		{
-			roles.GET("", kelasHandler.List)
-			roles.POST("", kelasHandler.Create)
-			roles.GET("/:id", kelasHandler.Get)
-			roles.PUT("/:id", kelasHandler.Update)
-			roles.DELETE("/:id", kelasHandler.Delete)
+			auth.POST("/login", authHandler.Login)
 		}
 
-		jurusan := api.Group("/jurusan")
+		// ── Protected: semua route di bawah wajib token valid ──────────────
+		protected := api.Group("")
+		protected.Use(middlewares.RequireAuth(cfg.JWTSecret))
 		{
-			jurusan.GET("", jurusanHandler.List)
-			jurusan.POST("", jurusanHandler.Create)
-			jurusan.GET("/:id", jurusanHandler.Get)
-			jurusan.PUT("/:id", jurusanHandler.Update)
-			jurusan.DELETE("/:id", jurusanHandler.Delete)
-		}
+			// /kelas — admin: CRUD | guru: GET
+			kelas := protected.Group("/kelas")
+			{
+				kelas.GET("", middlewares.RequireRole("admin", "guru"), kelasHandler.List)
+				kelas.GET("/:id", middlewares.RequireRole("admin", "guru"), kelasHandler.Get)
+				kelas.POST("", middlewares.RequireRole("admin"), kelasHandler.Create)
+				kelas.PUT("/:id", middlewares.RequireRole("admin"), kelasHandler.Update)
+				kelas.DELETE("/:id", middlewares.RequireRole("admin"), kelasHandler.Delete)
+			}
 
-		users := api.Group("/user")
-		{
-			users.GET("", userHandler.List)
-			users.POST("", userHandler.Create)
-			users.GET("/:id", userHandler.Get)
-			users.PATCH("/:id", userHandler.Update)
-			users.DELETE("/:id", userHandler.Delete)
+			// /jurusan — admin: CRUD
+			jurusan := protected.Group("/jurusan")
+			{
+				jurusan.GET("", middlewares.RequireRole("admin"), jurusanHandler.List)
+				jurusan.POST("", middlewares.RequireRole("admin"), jurusanHandler.Create)
+				jurusan.GET("/:id", middlewares.RequireRole("admin"), jurusanHandler.Get)
+				jurusan.PUT("/:id", middlewares.RequireRole("admin"), jurusanHandler.Update)
+				jurusan.DELETE("/:id", middlewares.RequireRole("admin"), jurusanHandler.Delete)
+			}
+
+			// /user — admin: CRUD
+			users := protected.Group("/user")
+			{
+				users.GET("", middlewares.RequireRole("admin"), userHandler.List)
+				users.POST("", middlewares.RequireRole("admin"), userHandler.Create)
+				users.GET("/:id", middlewares.RequireRole("admin"), userHandler.Get)
+				users.PATCH("/:id", middlewares.RequireRole("admin"), userHandler.Update)
+				users.DELETE("/:id", middlewares.RequireRole("admin"), userHandler.Delete)
+			}
+
+			// /perangkat — kabeng & admin: CRUD | kaprog & sapras: GET
+			perangkat := protected.Group("/perangkat")
+			{
+				perangkat.GET("", middlewares.RequireRole("kabeng", "admin", "kaprog", "sapras"), perangkatHandler.List)
+				perangkat.GET("/:id", middlewares.RequireRole("kabeng", "admin", "kaprog", "sapras"), perangkatHandler.Get)
+				perangkat.POST("", middlewares.RequireRole("kabeng", "admin"), perangkatHandler.Create)
+				perangkat.PATCH("/:id", middlewares.RequireRole("kabeng", "admin"), perangkatHandler.Update)
+				perangkat.DELETE("/:id", middlewares.RequireRole("kabeng", "admin"), perangkatHandler.Delete)
+			}
+
+			// /kategori — admin: CRUD
+			kategori := protected.Group("/kategori")
+			{
+				kategori.GET("", middlewares.RequireRole("admin"), kategoriHandler.List)
+				kategori.POST("", middlewares.RequireRole("admin"), kategoriHandler.Create)
+				kategori.GET("/:id", middlewares.RequireRole("admin"), kategoriHandler.Get)
+				kategori.PUT("/:id", middlewares.RequireRole("admin"), kategoriHandler.Update)
+				kategori.DELETE("/:id", middlewares.RequireRole("admin"), kategoriHandler.Delete)
+			}
+
+			// /labor — admin: CRUD | guru: GET
+			labor := protected.Group("/labor")
+			{
+				labor.GET("", middlewares.RequireRole("admin", "guru"), laborHandler.List)
+				labor.GET("/:id", middlewares.RequireRole("admin", "guru"), laborHandler.Get)
+				labor.POST("", middlewares.RequireRole("admin"), laborHandler.Create)
+				labor.PUT("/:id", middlewares.RequireRole("admin"), laborHandler.Update)
+				labor.DELETE("/:id", middlewares.RequireRole("admin"), laborHandler.Delete)
+			}
+
+			// /item-instance — kabeng & admin: CRUD | kaprog & sapras: GET
+			itemInstance := protected.Group("/item-instance")
+			{
+				itemInstance.GET("", middlewares.RequireRole("kabeng", "admin", "kaprog", "sapras"), itemInstanceHandler.List)
+				itemInstance.GET("/:id", middlewares.RequireRole("kabeng", "admin", "kaprog", "sapras"), itemInstanceHandler.Get)
+				itemInstance.POST("", middlewares.RequireRole("kabeng", "admin"), itemInstanceHandler.Create)
+				itemInstance.PUT("/:id", middlewares.RequireRole("kabeng", "admin"), itemInstanceHandler.Update)
+				itemInstance.DELETE("/:id", middlewares.RequireRole("kabeng", "admin"), itemInstanceHandler.Delete)
+			}
+
+			// /peminjaman — kabeng: CRUD | kaprog: GET
+			peminjaman := protected.Group("/peminjaman")
+			{
+				peminjaman.GET("", middlewares.RequireRole("kabeng", "kaprog"), peminjamanHandler.List)
+				peminjaman.GET("/:id", middlewares.RequireRole("kabeng", "kaprog"), peminjamanHandler.Get)
+				peminjaman.POST("", middlewares.RequireRole("kabeng"), peminjamanHandler.Create)
+				peminjaman.PATCH("/:id", middlewares.RequireRole("kabeng"), peminjamanHandler.Update)
+				peminjaman.DELETE("/:id", middlewares.RequireRole("kabeng"), peminjamanHandler.Delete)
+			}
+
+			// /penggunaan — kabeng: GET & DELETE | guru: POST
+			penggunaan := protected.Group("/penggunaan")
+			{
+				penggunaan.GET("", middlewares.RequireRole("kabeng"), penggunaanHandler.List)
+				penggunaan.GET("/:id", middlewares.RequireRole("kabeng"), penggunaanHandler.Get)
+				penggunaan.POST("", middlewares.RequireRole("guru"), penggunaanHandler.Create)
+				penggunaan.DELETE("/:id", middlewares.RequireRole("kabeng"), penggunaanHandler.Delete)
+			}
+
+			// /kerusakan — kabeng: GET, PUT, DELETE | guru: POST
+			kerusakan := protected.Group("/kerusakan")
+			{
+				kerusakan.GET("", middlewares.RequireRole("kabeng"), kerusakanHandler.List)
+				kerusakan.GET("/:id", middlewares.RequireRole("kabeng"), kerusakanHandler.Get)
+				kerusakan.POST("", middlewares.RequireRole("guru"), kerusakanHandler.Create)
+				kerusakan.PUT("/:id", middlewares.RequireRole("kabeng"), kerusakanHandler.Update)
+				kerusakan.DELETE("/:id", middlewares.RequireRole("kabeng"), kerusakanHandler.Delete)
+			}
 		}
 	}
 

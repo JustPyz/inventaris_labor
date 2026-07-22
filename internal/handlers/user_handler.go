@@ -1,13 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"invela-be/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type UserHandler struct {
@@ -37,7 +37,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 
 	item, err := h.service.Create(input)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		writeUserError(c, err, http.StatusInternalServerError, "failed to create user")
 		return
 	}
 
@@ -52,12 +52,7 @@ func (h *UserHandler) Get(c *gin.Context) {
 
 	item, err := h.service.Get(id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to fetch user"})
+		writeUserError(c, err, http.StatusInternalServerError, "failed to fetch user")
 		return
 	}
 
@@ -78,12 +73,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 
 	item, err := h.service.Update(id, input)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
-			return
-		}
-
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		writeUserError(c, err, http.StatusInternalServerError, "failed to update user")
 		return
 	}
 
@@ -97,12 +87,7 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.service.Delete(id); err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to delete user"})
+		writeUserError(c, err, http.StatusInternalServerError, "failed to delete user")
 		return
 	}
 
@@ -117,4 +102,28 @@ func parseUserID(c *gin.Context) (uint, bool) {
 	}
 
 	return uint(value), true
+}
+
+func writeUserError(c *gin.Context, err error, defaultStatus int, defaultMessage string) {
+	if errors.Is(err, services.ErrUserNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
+		return
+	}
+
+	if errors.Is(err, services.ErrRoleNotFound) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "role_id not found"})
+		return
+	}
+
+	if errors.Is(err, services.ErrJurusanNotFound) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "jurusan_id not found"})
+		return
+	}
+
+	if errors.Is(err, services.ErrUserInvalidInput) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(defaultStatus, gin.H{"message": defaultMessage})
 }

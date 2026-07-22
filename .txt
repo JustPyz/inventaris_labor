@@ -1,0 +1,2 @@
+to do list:
+hapus penggunaan secara berkala dan di backup oleh goroutine ke server

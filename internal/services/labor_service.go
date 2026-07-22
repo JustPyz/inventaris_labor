@@ -9,11 +9,11 @@ import (
 )
 
 type CreateLaborInput struct {
-	Kelas string `json:"kelas"`
+	Labor string `json:"labor"`
 }
 
 type UpdateLaborInput struct {
-	Kelas string `json:"kelas"`
+	Labor string `json:"labor"`
 }
 
 type LaborService struct {
@@ -34,12 +34,12 @@ func (s *LaborService) List() ([]models.Labor, error) {
 }
 
 func (s *LaborService) Create(input CreateLaborInput) (*models.Labor, error) {
-	kelas := strings.TrimSpace(input.Kelas)
-	if kelas == "" {
-		return nil, fmt.Errorf("kelas is required")
+	labor := strings.TrimSpace(input.Labor)
+	if labor == "" {
+		return nil, fmt.Errorf("labor is required")
 	}
 
-	data := &models.Labor{Kelas: kelas}
+	data := &models.Labor{Labor: labor}
 	if err := s.repo.Create(data); err != nil {
 		return nil, err
 	}
@@ -62,12 +62,12 @@ func (s *LaborService) Update(id uint, input UpdateLaborInput) (*models.Labor, e
 		return nil, err
 	}
 
-	kelas := strings.TrimSpace(input.Kelas)
-	if kelas == "" {
-		return nil, fmt.Errorf("kelas is required")
+	labor := strings.TrimSpace(input.Labor)
+	if labor == "" {
+		return nil, fmt.Errorf("labor is required")
 	}
 
-	data.Kelas = kelas
+	data.Labor = labor
 	if err := s.repo.Update(data); err != nil {
 		return nil, err
 	}

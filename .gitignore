@@ -6,3 +6,4 @@ bin/
 tmp/
 *.exe
 *.test
+.txt

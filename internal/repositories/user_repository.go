@@ -15,7 +15,7 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 }
 
 func (r *UserRepository) List(users *[]models.User) error {
-	return r.db.Preload("Role").Order("id ASC").Find(users).Error
+	return r.db.Preload("Role").Preload("Jurusan").Order("id ASC").Find(users).Error
 }
 
 func (r *UserRepository) Create(user *models.User) error {
@@ -23,7 +23,27 @@ func (r *UserRepository) Create(user *models.User) error {
 }
 
 func (r *UserRepository) FindByID(id uint, user *models.User) error {
-	return r.db.Preload("Role").First(user, id).Error
+	return r.db.Preload("Role").Preload("Jurusan").First(user, id).Error
+}
+
+func (r *UserRepository) RoleExists(roleID uint) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.Role{}).Where("id = ?", roleID).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (r *UserRepository) JurusanExists(jurusanID uint) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.Jurusan{}).Where("id = ?", jurusanID).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }
 
 func (r *UserRepository) Update(user *models.User) error {
@@ -32,4 +52,8 @@ func (r *UserRepository) Update(user *models.User) error {
 
 func (r *UserRepository) Delete(user *models.User) error {
 	return r.db.Delete(user).Error
+}
+
+func (r *UserRepository) FindByUsername(username string, user *models.User) error {
+	return r.db.Preload("Role").Where("username = ?", username).First(user).Error
 }
