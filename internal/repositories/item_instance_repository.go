@@ -14,8 +14,15 @@ func NewItemInstanceRepository(db *gorm.DB) *ItemInstanceRepository {
 	return &ItemInstanceRepository{db: db}
 }
 
-func (r *ItemInstanceRepository) List(items *[]models.ItemInstance) error {
-	return r.db.Preload("Perangkat").Order("id ASC").Find(items).Error
+func (r *ItemInstanceRepository) List(role string, jurusanID *uint, items *[]models.ItemInstance) error {
+	query := r.db.Preload("Perangkat").Order("item_instances.id ASC")
+	
+	if (role == "kabeng" || role == "kaprog") && jurusanID != nil {
+		query = query.Joins("JOIN perangkats ON perangkats.id = item_instances.id_perangkat").
+			Where("perangkats.id_jurusan = ?", *jurusanID)
+	}
+
+	return query.Find(items).Error
 }
 
 func (r *ItemInstanceRepository) Create(item *models.ItemInstance) error {

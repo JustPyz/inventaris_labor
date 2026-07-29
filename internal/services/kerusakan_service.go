@@ -36,11 +36,13 @@ type UpdateKerusakanInput struct {
 }
 
 type KerusakanService struct {
-	repo repositories.KerusakanRepository
+	db               *gorm.DB
+	repo             repositories.KerusakanRepository
+	itemInstanceRepo *repositories.ItemInstanceRepository
 }
 
-func NewKerusakanService(repo repositories.KerusakanRepository) *KerusakanService {
-	return &KerusakanService{repo: repo}
+func NewKerusakanService(db *gorm.DB, repo repositories.KerusakanRepository, itemInstanceRepo *repositories.ItemInstanceRepository) *KerusakanService {
+	return &KerusakanService{db: db, repo: repo, itemInstanceRepo: itemInstanceRepo}
 }
 
 func (s *KerusakanService) List() ([]models.Kerusakan, error) {
@@ -80,7 +82,21 @@ func (s *KerusakanService) Create(userID uint, input CreateKerusakanInput) (*mod
 		Status:         status,
 	}
 
-	if err := s.repo.Create(kerusakan); err != nil {
+	// Jalankan dalam transaksi: simpan kerusakan + update status item_instance
+	// Jika salah satu gagal, keduanya dibatalkan (rollback).
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(kerusakan).Error; err != nil {
+			return fmt.Errorf("simpan kerusakan: %w", err)
+		}
+
+		if err := tx.Model(&models.ItemInstance{}).Where("id = ?", input.ItemInstanceID).
+			Update("status", "rusak").Error; err != nil {
+			return fmt.Errorf("update status item_instance: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -155,4 +171,20 @@ func (s *KerusakanService) Delete(id uint) error {
 	}
 
 	return s.repo.Delete(id)
+}
+
+func (s *KerusakanService) GetStats(itemInstanceID uint) (*models.KerusakanStats, error) {
+	if itemInstanceID == 0 {
+		return nil, fmt.Errorf("%w: id_item_instance is required", ErrKerusakanInvalidInput)
+	}
+
+	exists, err := s.repo.ItemInstanceExists(itemInstanceID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, fmt.Errorf("%w: id_item_instance %d", ErrKerusakanItemInstanceNotFound, itemInstanceID)
+	}
+
+	return s.repo.GetStatsByItemInstanceID(itemInstanceID)
 }

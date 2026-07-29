@@ -3,10 +3,14 @@ package main
 import (
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"invela-be/internal/config"
 	"invela-be/internal/database"
 	"invela-be/internal/handlers"
+	"invela-be/internal/jobs"
 	"invela-be/internal/repositories"
 	"invela-be/internal/router"
 	"invela-be/internal/services"
@@ -62,7 +66,7 @@ func main() {
 
 	// Peminjaman
 	peminjamanRepository := repositories.NewPeminjamanRepository(db)
-	peminjamanService := services.NewPeminjamanService(peminjamanRepository)
+	peminjamanService := services.NewPeminjamanService(db, peminjamanRepository, itemInstanceRepository)
 	peminjamanHandler := handlers.NewPeminjamanHandler(peminjamanService)
 
 	// Penggunaan
@@ -72,10 +76,36 @@ func main() {
 
 	// Kerusakan
 	kerusakanRepository := repositories.NewKerusakanRepository(db)
-	kerusakanService := services.NewKerusakanService(kerusakanRepository)
+	kerusakanService := services.NewKerusakanService(db, kerusakanRepository, itemInstanceRepository)
 	kerusakanHandler := handlers.NewKerusakanHandler(kerusakanService)
 
-	engine := router.New(cfg, db, authHandler, kelasHandler, jurusanHandler, userHandler, perangkatHandler, kategoriHandler, laborHandler, itemInstanceHandler, peminjamanHandler, penggunaanHandler, kerusakanHandler)
+	// Perbaikan
+	perbaikanRepository := repositories.NewPerbaikanRepository(db)
+	riwayatPerbaikanRepository := repositories.NewRiwayatPerbaikanRepository(db)
+	perbaikanService := services.NewPerbaikanService(db, perbaikanRepository, kerusakanRepository, itemInstanceRepository, userRepository, riwayatPerbaikanRepository)
+	perbaikanHandler := handlers.NewPerbaikanHandler(perbaikanService)
+
+	// Riwayat Perbaikan
+	riwayatPerbaikanService := services.NewRiwayatPerbaikanService(riwayatPerbaikanRepository)
+	riwayatPerbaikanHandler := handlers.NewRiwayatPerbaikanHandler(riwayatPerbaikanService)
+
+	engine := router.New(cfg, db, authHandler, kelasHandler, jurusanHandler, userHandler, perangkatHandler, kategoriHandler, laborHandler, itemInstanceHandler, peminjamanHandler, penggunaanHandler, kerusakanHandler, perbaikanHandler, riwayatPerbaikanHandler)
+
+	// Background jobs
+	overdueJob := jobs.NewPeminjamanOverdueJob(peminjamanRepository, 1*time.Hour)
+	overdueJob.Start()
+
+	// Graceful shutdown: tangkap sinyal SIGINT / SIGTERM
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-quit
+		log.Println(" Shutting down...")
+		overdueJob.Stop()
+		os.Exit(0)
+	}()
+
 	log.Println(" Server Started")
 	if err := engine.Run(":" + cfg.Port); err != nil {
 		log.Printf("server stopped: %v", err)

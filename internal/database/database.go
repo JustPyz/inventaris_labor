@@ -72,6 +72,14 @@ func Open(dbPath string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("auto migrate kerusakan: %w", err)
 	}
 
+	if err := db.AutoMigrate(&models.Perbaikan{}); err != nil {
+		return nil, fmt.Errorf("auto migrate perbaikan: %w", err)
+	}
+
+	if err := db.AutoMigrate(&models.RiwayatPerbaikan{}); err != nil {
+		return nil, fmt.Errorf("auto migrate riwayat perbaikan: %w", err)
+	}
+
 	if err := seedRoles(db); err != nil {
 		return nil, fmt.Errorf("seed roles: %w", err)
 	}
@@ -107,7 +115,7 @@ func seedRoles(db *gorm.DB) error {
 
 func seedAdminUser(db *gorm.DB) error {
 	var count int64
-	db.Model(&models.User{}).Where("username = ?", "admin").Count(&count)
+	db.Model(&models.User{}).Where("username = ?", "admin@smkn4pyk.com").Count(&count)
 	if count > 0 {
 		return nil // sudah ada
 	}
@@ -123,7 +131,7 @@ func seedAdminUser(db *gorm.DB) error {
 	}
 
 	admin := &models.User{
-		Username:     "admin",
+		Username:     "admin@smkn4pyk.com",
 		PasswordHash: string(hash),
 		RoleID:       adminRole.ID,
 	}
@@ -132,7 +140,7 @@ func seedAdminUser(db *gorm.DB) error {
 		return fmt.Errorf("create admin user: %w", err)
 	}
 
-	log.Println("Seeded admin user (username: admin, password: adminsmkn4pyk)")
+	log.Println("Seeded admin user (username: admin@smkn4pyk.com, password: admin123)")
 	return nil
 }
 

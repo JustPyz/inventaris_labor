@@ -25,15 +25,17 @@ type LoginResult struct {
 }
 
 type UserInfo struct {
-	ID       uint   `json:"id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	ID        uint   `json:"id"`
+	Username  string `json:"username"`
+	Role      string `json:"role"`
+	JurusanID *uint  `json:"jurusan_id"`
 }
 
 type AuthClaims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	UserID    uint   `json:"user_id"`
+	Username  string `json:"username"`
+	Role      string `json:"role"`
+	JurusanID *uint  `json:"jurusan_id"`
 	jwt.RegisteredClaims
 }
 
@@ -74,18 +76,20 @@ func (s *AuthService) Login(input LoginInput) (*LoginResult, error) {
 	return &LoginResult{
 		Token: token,
 		User: UserInfo{
-			ID:       user.ID,
-			Username: user.Username,
-			Role:     user.Role.Role,
+			ID:        user.ID,
+			Username:  user.Username,
+			Role:      user.Role.Role,
+			JurusanID: user.JurusanID,
 		},
 	}, nil
 }
 
 func (s *AuthService) generateToken(user *models.User) (string, error) {
 	claims := AuthClaims{
-		UserID:   user.ID,
-		Username: user.Username,
-		Role:     user.Role.Role,
+		UserID:    user.ID,
+		Username:  user.Username,
+		Role:      user.Role.Role,
+		JurusanID: user.JurusanID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

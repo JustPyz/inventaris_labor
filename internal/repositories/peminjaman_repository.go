@@ -43,3 +43,15 @@ func (r *PeminjamanRepository) ItemInstanceExists(id uint) (bool, error) {
 
 	return count > 0, nil
 }
+
+// MarkOverdue mengupdate semua peminjaman berstatus 'aktif' yang tanggal_kembali-nya
+// sudah melewati waktu sekarang menjadi 'melewati batas waktu'.
+// Mengembalikan jumlah baris yang berhasil diupdate.
+func (r *PeminjamanRepository) MarkOverdue(now string) (int64, error) {
+	result := r.db.Model(&models.Peminjaman{}).
+		Where("status = ? AND tanggal_kembali < ?", "aktif", now).
+		Updates(map[string]any{
+			"status": "melewati batas waktu",
+		})
+	return result.RowsAffected, result.Error
+}

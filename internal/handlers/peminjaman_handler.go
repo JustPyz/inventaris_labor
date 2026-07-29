@@ -94,6 +94,11 @@ func (h *PeminjamanHandler) Update(c *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, services.ErrPeminjamanAlreadySelesai) {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"message": err.Error()})
+			return
+		}
+
 		if errors.Is(err, services.ErrPeminjamanInvalidInput) {
 			c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 			return

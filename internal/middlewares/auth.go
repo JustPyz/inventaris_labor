@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	ContextKeyUserID   = "user_id"
-	ContextKeyUsername = "username"
-	ContextKeyRole     = "role"
+	ContextKeyUserID    = "user_id"
+	ContextKeyUsername  = "username"
+	ContextKeyRole      = "role"
+	ContextKeyJurusanID = "jurusan_id"
 )
 
 // RequireAuth memvalidasi Bearer token JWT dan menyimpan claims ke context.
@@ -51,6 +52,9 @@ func RequireAuth(jwtSecret string) gin.HandlerFunc {
 		c.Set(ContextKeyUserID, claims.UserID)
 		c.Set(ContextKeyUsername, claims.Username)
 		c.Set(ContextKeyRole, claims.Role)
+		if claims.JurusanID != nil {
+			c.Set(ContextKeyJurusanID, claims.JurusanID)
+		}
 		c.Next()
 	}
 }

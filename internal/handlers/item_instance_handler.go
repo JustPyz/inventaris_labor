@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"invela-be/internal/middlewares"
 	"invela-be/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +21,21 @@ func NewItemInstanceHandler(service *services.ItemInstanceService) *ItemInstance
 }
 
 func (h *ItemInstanceHandler) List(c *gin.Context) {
-	items, err := h.service.List()
+	roleStr := ""
+	if role, exists := c.Get(middlewares.ContextKeyRole); exists {
+		if r, ok := role.(string); ok {
+			roleStr = r
+		}
+	}
+
+	var jurusanID *uint
+	if jID, exists := c.Get(middlewares.ContextKeyJurusanID); exists {
+		if j, ok := jID.(*uint); ok {
+			jurusanID = j
+		}
+	}
+
+	items, err := h.service.List(roleStr, jurusanID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to fetch item instances"})
 		return

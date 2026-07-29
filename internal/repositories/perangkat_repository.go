@@ -14,8 +14,14 @@ func NewPerangkatRepository(db *gorm.DB) *PerangkatRepository {
 	return &PerangkatRepository{db: db}
 }
 
-func (r *PerangkatRepository) List(perangkat *[]models.Perangkat) error {
-	return r.db.Order("id ASC").Find(perangkat).Error
+func (r *PerangkatRepository) List(role string, jurusanID *uint, perangkat *[]models.Perangkat) error {
+	query := r.db.Order("id ASC")
+	
+	if (role == "kabeng" || role == "kaprog") && jurusanID != nil {
+		query = query.Where("id_jurusan = ?", *jurusanID)
+	}
+	
+	return query.Find(perangkat).Error
 }
 
 func (r *PerangkatRepository) Create(perangkat *models.Perangkat) error {

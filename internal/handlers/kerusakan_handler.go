@@ -156,3 +156,24 @@ func parseKerusakanID(c *gin.Context) (uint, bool) {
 
 	return uint(value), true
 }
+
+func (h *KerusakanHandler) GetStats(c *gin.Context) {
+	idStr := c.Param("id_item_instance")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid id_item_instance"})
+		return
+	}
+
+	stats, err := h.service.GetStats(uint(id))
+	if err != nil {
+		if errors.Is(err, services.ErrKerusakanItemInstanceNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"message": "item instance not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to get stats"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": stats})
+}

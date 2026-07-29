@@ -43,9 +43,9 @@ func NewPerangkatService(repo *repositories.PerangkatRepository) *PerangkatServi
 	return &PerangkatService{repo: repo}
 }
 
-func (s *PerangkatService) List() ([]models.Perangkat, error) {
+func (s *PerangkatService) List(role string, jurusanID *uint) ([]models.Perangkat, error) {
 	items := make([]models.Perangkat, 0)
-	if err := s.repo.List(&items); err != nil {
+	if err := s.repo.List(role, jurusanID, &items); err != nil {
 		return nil, err
 	}
 

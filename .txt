@@ -1,2 +1,4 @@
+cabut ketergantungan user atas tabel kerusakan(on delete restrict)
+
 to do list:
 hapus penggunaan secara berkala dan di backup oleh goroutine ke server

@@ -26,6 +26,8 @@ func New(
 	peminjamanHandler *handlers.PeminjamanHandler,
 	penggunaanHandler *handlers.PenggunaanHandler,
 	kerusakanHandler *handlers.KerusakanHandler,
+	perbaikanHandler *handlers.PerbaikanHandler,
+	riwayatPerbaikanHandler *handlers.RiwayatPerbaikanHandler,
 ) *gin.Engine {
 	if gin.Mode() == gin.DebugMode {
 		gin.SetMode(gin.ReleaseMode)
@@ -83,9 +85,9 @@ func New(
 			// /jurusan — admin: CRUD
 			jurusan := protected.Group("/jurusan")
 			{
-				jurusan.GET("", middlewares.RequireRole("admin"), jurusanHandler.List)
+				jurusan.GET("", middlewares.RequireRole("admin", "kabeng"), jurusanHandler.List)
 				jurusan.POST("", middlewares.RequireRole("admin"), jurusanHandler.Create)
-				jurusan.GET("/:id", middlewares.RequireRole("admin"), jurusanHandler.Get)
+				jurusan.GET("/:id", middlewares.RequireRole("admin", "kabeng"), jurusanHandler.Get)
 				jurusan.PUT("/:id", middlewares.RequireRole("admin"), jurusanHandler.Update)
 				jurusan.DELETE("/:id", middlewares.RequireRole("admin"), jurusanHandler.Delete)
 			}
@@ -103,8 +105,8 @@ func New(
 			// /perangkat — kabeng & admin: CRUD | kaprog & sapras: GET
 			perangkat := protected.Group("/perangkat")
 			{
-				perangkat.GET("", middlewares.RequireRole("kabeng", "admin", "kaprog", "sapras"), perangkatHandler.List)
-				perangkat.GET("/:id", middlewares.RequireRole("kabeng", "admin", "kaprog", "sapras"), perangkatHandler.Get)
+				perangkat.GET("", middlewares.RequireRole("kabeng", "admin", "guru", "kaprog", "sapras"), perangkatHandler.List)
+				perangkat.GET("/:id", middlewares.RequireRole("kabeng", "admin", "guru", "kaprog", "sapras"), perangkatHandler.Get)
 				perangkat.POST("", middlewares.RequireRole("kabeng", "admin"), perangkatHandler.Create)
 				perangkat.PATCH("/:id", middlewares.RequireRole("kabeng", "admin"), perangkatHandler.Update)
 				perangkat.DELETE("/:id", middlewares.RequireRole("kabeng", "admin"), perangkatHandler.Delete)
@@ -113,9 +115,9 @@ func New(
 			// /kategori — admin: CRUD
 			kategori := protected.Group("/kategori")
 			{
-				kategori.GET("", middlewares.RequireRole("admin"), kategoriHandler.List)
+				kategori.GET("", middlewares.RequireRole("admin", "kabeng", "sapras", "kaprog"), kategoriHandler.List)
 				kategori.POST("", middlewares.RequireRole("admin"), kategoriHandler.Create)
-				kategori.GET("/:id", middlewares.RequireRole("admin"), kategoriHandler.Get)
+				kategori.GET("/:id", middlewares.RequireRole("admin", "kabeng", "sapras", "kaprog"), kategoriHandler.Get)
 				kategori.PUT("/:id", middlewares.RequireRole("admin"), kategoriHandler.Update)
 				kategori.DELETE("/:id", middlewares.RequireRole("admin"), kategoriHandler.Delete)
 			}
@@ -123,8 +125,8 @@ func New(
 			// /labor — admin: CRUD | guru: GET
 			labor := protected.Group("/labor")
 			{
-				labor.GET("", middlewares.RequireRole("admin", "guru"), laborHandler.List)
-				labor.GET("/:id", middlewares.RequireRole("admin", "guru"), laborHandler.Get)
+				labor.GET("", middlewares.RequireRole("admin", "guru", "kabeng", "sapras", "kaprog"), laborHandler.List)
+				labor.GET("/:id", middlewares.RequireRole("admin", "guru", "kabeng", "sapras", "kaprog"), laborHandler.Get)
 				labor.POST("", middlewares.RequireRole("admin"), laborHandler.Create)
 				labor.PUT("/:id", middlewares.RequireRole("admin"), laborHandler.Update)
 				labor.DELETE("/:id", middlewares.RequireRole("admin"), laborHandler.Delete)
@@ -133,8 +135,8 @@ func New(
 			// /item-instance — kabeng & admin: CRUD | kaprog & sapras: GET
 			itemInstance := protected.Group("/item-instance")
 			{
-				itemInstance.GET("", middlewares.RequireRole("kabeng", "admin", "kaprog", "sapras"), itemInstanceHandler.List)
-				itemInstance.GET("/:id", middlewares.RequireRole("kabeng", "admin", "kaprog", "sapras"), itemInstanceHandler.Get)
+				itemInstance.GET("", middlewares.RequireRole("kabeng", "admin", "guru", "kaprog", "sapras"), itemInstanceHandler.List)
+				itemInstance.GET("/:id", middlewares.RequireRole("kabeng", "admin", "guru", "kaprog", "sapras"), itemInstanceHandler.Get)
 				itemInstance.POST("", middlewares.RequireRole("kabeng", "admin"), itemInstanceHandler.Create)
 				itemInstance.PUT("/:id", middlewares.RequireRole("kabeng", "admin"), itemInstanceHandler.Update)
 				itemInstance.DELETE("/:id", middlewares.RequireRole("kabeng", "admin"), itemInstanceHandler.Delete)
@@ -162,16 +164,34 @@ func New(
 			// /kerusakan — kabeng: GET, PUT, DELETE | guru: POST
 			kerusakan := protected.Group("/kerusakan")
 			{
-				kerusakan.GET("", middlewares.RequireRole("kabeng"), kerusakanHandler.List)
+				kerusakan.GET("", middlewares.RequireRole("kabeng", "kaprog", "sapras"), kerusakanHandler.List)
 				kerusakan.GET("/:id", middlewares.RequireRole("kabeng"), kerusakanHandler.Get)
-				kerusakan.POST("", middlewares.RequireRole("guru"), kerusakanHandler.Create)
+				kerusakan.POST("", middlewares.RequireRole("guru", "kabeng"), kerusakanHandler.Create)
 				kerusakan.PUT("/:id", middlewares.RequireRole("kabeng"), kerusakanHandler.Update)
 				kerusakan.DELETE("/:id", middlewares.RequireRole("kabeng"), kerusakanHandler.Delete)
+				kerusakan.GET("/stats/:id_item_instance", middlewares.RequireRole("kabeng", "guru", "kaprog", "sapras", "admin"), kerusakanHandler.GetStats)
+			}
+
+			// /perbaikan — kabeng: CRUD
+			perbaikan := protected.Group("/perbaikan")
+			{
+				perbaikan.GET("", middlewares.RequireRole("kabeng", "kaprog", "sapras"), perbaikanHandler.List)
+				perbaikan.GET("/:id", middlewares.RequireRole("kabeng", "kaprog", "sapras"), perbaikanHandler.Get)
+				perbaikan.POST("", middlewares.RequireRole("kabeng"), perbaikanHandler.Create)
+				perbaikan.PUT("/:id", middlewares.RequireRole("kabeng"), perbaikanHandler.Update)
+				perbaikan.DELETE("/:id", middlewares.RequireRole("kabeng"), perbaikanHandler.Delete)
+			}
+
+			// /riwayat-perbaikan — kabeng & admin: GET only (append-only audit log)
+			riwayat := protected.Group("/riwayat-perbaikan")
+			{
+				riwayat.GET("", middlewares.RequireRole("kabeng", "admin", "sapras", "kaprog"), riwayatPerbaikanHandler.List)
+				riwayat.GET("/:kode_asset", middlewares.RequireRole("kabeng", "admin", "sapras", "kaprog"), riwayatPerbaikanHandler.GetByKodeAsset)
 			}
 		}
 	}
 
-	return router
+	return router  
 }
 
 func databaseState(db *sql.DB) string {

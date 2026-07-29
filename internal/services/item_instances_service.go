@@ -44,9 +44,9 @@ func NewItemInstanceService(repo *repositories.ItemInstanceRepository) *ItemInst
 	return &ItemInstanceService{repo: repo}
 }
 
-func (s *ItemInstanceService) List() ([]models.ItemInstance, error) {
+func (s *ItemInstanceService) List(role string, jurusanID *uint) ([]models.ItemInstance, error) {
 	items := make([]models.ItemInstance, 0)
-	if err := s.repo.List(&items); err != nil {
+	if err := s.repo.List(role, jurusanID, &items); err != nil {
 		return nil, err
 	}
 

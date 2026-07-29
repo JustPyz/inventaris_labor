@@ -13,9 +13,12 @@ import (
 )
 
 var (
-	ErrPeminjamanInvalidInput           = errors.New("peminjaman input is invalid")
-	ErrPeminjamanItemInstanceNotFound   = errors.New("item instance not found")
-	ErrPeminjamanNotFound               = errors.New("peminjaman not found")
+	ErrPeminjamanInvalidInput         = errors.New("peminjaman input is invalid")
+	ErrPeminjamanItemInstanceNotFound = errors.New("item instance not found")
+	ErrPeminjamanNotFound             = errors.New("peminjaman not found")
+	// ErrPeminjamanAlreadySelesai dikembalikan saat mencoba mengubah peminjaman
+	// yang statusnya sudah 'selesai' — status ini bersifat final dan tidak bisa diubah.
+	ErrPeminjamanAlreadySelesai = errors.New("peminjaman sudah selesai dan tidak dapat diubah")
 )
 
 var allowedPeminjamanStatus = map[string]struct{}{
@@ -43,11 +46,13 @@ type UpdatePeminjamanInput struct {
 }
 
 type PeminjamanService struct {
-	repo *repositories.PeminjamanRepository
+	db               *gorm.DB
+	repo             *repositories.PeminjamanRepository
+	itemInstanceRepo *repositories.ItemInstanceRepository
 }
 
-func NewPeminjamanService(repo *repositories.PeminjamanRepository) *PeminjamanService {
-	return &PeminjamanService{repo: repo}
+func NewPeminjamanService(db *gorm.DB, repo *repositories.PeminjamanRepository, itemInstanceRepo *repositories.ItemInstanceRepository) *PeminjamanService {
+	return &PeminjamanService{db: db, repo: repo, itemInstanceRepo: itemInstanceRepo}
 }
 
 const dateLayout = "2006-01-02"
@@ -122,7 +127,23 @@ func (s *PeminjamanService) Create(input CreatePeminjamanInput) (*models.Peminja
 		Status:         status,
 	}
 
-	if err := s.repo.Create(data); err != nil {
+	// Status 'aktif' dan 'melewati batas waktu' berarti barang sedang dipinjam.
+	// Jalankan dalam transaksi: simpan peminjaman + (kondisional) update status item_instance.
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(data).Error; err != nil {
+			return fmt.Errorf("simpan peminjaman: %w", err)
+		}
+
+		if status == "aktif" || status == "melewati batas waktu" {
+			if err := tx.Model(&models.ItemInstance{}).Where("id = ?", input.ItemInstanceID).
+				Update("status", "dipinjam").Error; err != nil {
+				return fmt.Errorf("update status item_instance: %w", err)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -146,6 +167,11 @@ func (s *PeminjamanService) Update(id uint, input UpdatePeminjamanInput) (*model
 	data, err := s.Get(id)
 	if err != nil {
 		return nil, err
+	}
+
+	// Guard: peminjaman yang sudah 'selesai' bersifat final — tidak dapat diubah.
+	if data.Status == "selesai" {
+		return nil, ErrPeminjamanAlreadySelesai
 	}
 
 	if input.ItemInstanceID != nil {
@@ -213,7 +239,25 @@ func (s *PeminjamanService) Update(id uint, input UpdatePeminjamanInput) (*model
 		data.Status = status
 	}
 
-	if err := s.repo.Update(data); err != nil {
+	// Jalankan dalam transaksi: update peminjaman + (kondisional) update status item_instance.
+	// Saat status berubah menjadi 'selesai', item_instance dikembalikan ke 'aktif'.
+	// Kasus reopen (selesai → aktif) tidak perlu ditangani karena sudah diblok di atas.
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(data).Error; err != nil {
+			return fmt.Errorf("update peminjaman: %w", err)
+		}
+
+		if data.Status == "selesai" {
+			// Peminjaman selesai → kembalikan item ke 'aktif'
+			if err := tx.Model(&models.ItemInstance{}).Where("id = ?", data.ItemInstanceID).
+				Update("status", "aktif").Error; err != nil {
+				return fmt.Errorf("update status item_instance ke aktif: %w", err)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
