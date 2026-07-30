@@ -56,7 +56,7 @@ func main() {
 
 	// Labor
 	laborRepository := repositories.NewLaborRepository(db)
-	laborService := services.NewLaborService(laborRepository)
+	laborService := services.NewLaborService(laborRepository, jurusanRepository)
 	laborHandler := handlers.NewLaborHandler(laborService)
 
 	// Item Instance

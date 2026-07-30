@@ -15,7 +15,7 @@ func NewLaborRepository(db *gorm.DB) *LaborRepository {
 }
 
 func (r *LaborRepository) List(labor *[]models.Labor) error {
-	return r.db.Order("id ASC").Find(labor).Error
+	return r.db.Preload("Jurusan").Order("id ASC").Find(labor).Error
 }
 
 func (r *LaborRepository) Create(labor *models.Labor) error {
@@ -23,7 +23,7 @@ func (r *LaborRepository) Create(labor *models.Labor) error {
 }
 
 func (r *LaborRepository) FindByID(id uint, labor *models.Labor) error {
-	return r.db.First(labor, id).Error
+	return r.db.Preload("Jurusan").First(labor, id).Error
 }
 
 func (r *LaborRepository) Update(labor *models.Labor) error {

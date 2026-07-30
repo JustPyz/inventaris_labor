@@ -75,8 +75,8 @@ func New(
 			// /kelas — admin: CRUD | guru: GET
 			kelas := protected.Group("/kelas")
 			{
-				kelas.GET("", middlewares.RequireRole("admin", "guru"), kelasHandler.List)
-				kelas.GET("/:id", middlewares.RequireRole("admin", "guru"), kelasHandler.Get)
+				kelas.GET("", middlewares.RequireRole("admin", "guru", "kabeng"), kelasHandler.List)
+				kelas.GET("/:id", middlewares.RequireRole("admin", "guru", "kabeng"), kelasHandler.Get)
 				kelas.POST("", middlewares.RequireRole("admin"), kelasHandler.Create)
 				kelas.PUT("/:id", middlewares.RequireRole("admin"), kelasHandler.Update)
 				kelas.DELETE("/:id", middlewares.RequireRole("admin"), kelasHandler.Delete)

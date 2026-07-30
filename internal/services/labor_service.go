@@ -9,19 +9,22 @@ import (
 )
 
 type CreateLaborInput struct {
-	Labor string `json:"labor"`
+	JurusanID uint   `json:"id_jurusan"`
+	Labor     string `json:"labor"`
 }
 
 type UpdateLaborInput struct {
-	Labor string `json:"labor"`
+	JurusanID *uint   `json:"id_jurusan"`
+	Labor     *string `json:"labor"`
 }
 
 type LaborService struct {
-	repo *repositories.LaborRepository
+	repo        *repositories.LaborRepository
+	jurusanRepo *repositories.JurusanRepository
 }
 
-func NewLaborService(repo *repositories.LaborRepository) *LaborService {
-	return &LaborService{repo: repo}
+func NewLaborService(repo *repositories.LaborRepository, jurusanRepo *repositories.JurusanRepository) *LaborService {
+	return &LaborService{repo: repo, jurusanRepo: jurusanRepo}
 }
 
 func (s *LaborService) List() ([]models.Labor, error) {
@@ -34,12 +37,21 @@ func (s *LaborService) List() ([]models.Labor, error) {
 }
 
 func (s *LaborService) Create(input CreateLaborInput) (*models.Labor, error) {
+	if input.JurusanID == 0 {
+		return nil, fmt.Errorf("id_jurusan is required")
+	}
+
+	var jurusan models.Jurusan
+	if err := s.jurusanRepo.FindByID(input.JurusanID, &jurusan); err != nil {
+		return nil, fmt.Errorf("jurusan not found")
+	}
+
 	labor := strings.TrimSpace(input.Labor)
 	if labor == "" {
 		return nil, fmt.Errorf("labor is required")
 	}
 
-	data := &models.Labor{Labor: labor}
+	data := &models.Labor{JurusanID: input.JurusanID, Labor: labor}
 	if err := s.repo.Create(data); err != nil {
 		return nil, err
 	}
@@ -62,12 +74,26 @@ func (s *LaborService) Update(id uint, input UpdateLaborInput) (*models.Labor, e
 		return nil, err
 	}
 
-	labor := strings.TrimSpace(input.Labor)
-	if labor == "" {
-		return nil, fmt.Errorf("labor is required")
+	if input.JurusanID != nil {
+		if *input.JurusanID == 0 {
+			return nil, fmt.Errorf("id_jurusan is required")
+		}
+
+		var jurusan models.Jurusan
+		if err := s.jurusanRepo.FindByID(*input.JurusanID, &jurusan); err != nil {
+			return nil, fmt.Errorf("jurusan not found")
+		}
+		data.JurusanID = *input.JurusanID
 	}
 
-	data.Labor = labor
+	if input.Labor != nil {
+		labor := strings.TrimSpace(*input.Labor)
+		if labor == "" {
+			return nil, fmt.Errorf("labor is required")
+		}
+		data.Labor = labor
+	}
+
 	if err := s.repo.Update(data); err != nil {
 		return nil, err
 	}
