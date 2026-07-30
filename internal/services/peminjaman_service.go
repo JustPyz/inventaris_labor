@@ -30,6 +30,7 @@ var allowedPeminjamanStatus = map[string]struct{}{
 type CreatePeminjamanInput struct {
 	ItemInstanceID uint   `json:"id_item_instance"`
 	NamaPeminjam   string `json:"nama_peminjam"`
+	Kelas          string `json:"kelas"`
 	NomorTelepon   string `json:"nomor_telepon"`
 	TanggalPinjam  string `json:"tanggal_pinjam"`
 	TanggalKembali string `json:"tanggal_kembali"`
@@ -39,6 +40,7 @@ type CreatePeminjamanInput struct {
 type UpdatePeminjamanInput struct {
 	ItemInstanceID *uint   `json:"id_item_instance"`
 	NamaPeminjam   *string `json:"nama_peminjam"`
+	Kelas          *string `json:"kelas"`
 	NomorTelepon   *string `json:"nomor_telepon"`
 	TanggalPinjam  *string `json:"tanggal_pinjam"`
 	TanggalKembali *string `json:"tanggal_kembali"`
@@ -84,6 +86,11 @@ func (s *PeminjamanService) Create(input CreatePeminjamanInput) (*models.Peminja
 		return nil, fmt.Errorf("%w: nama_peminjam is required", ErrPeminjamanInvalidInput)
 	}
 
+	kelas := strings.TrimSpace(input.Kelas)
+	if kelas == "" {
+		return nil, fmt.Errorf("%w: kelas is required", ErrPeminjamanInvalidInput)
+	}
+
 	nomorTelepon := strings.TrimSpace(input.NomorTelepon)
 	if nomorTelepon == "" {
 		return nil, fmt.Errorf("%w: nomor_telepon is required", ErrPeminjamanInvalidInput)
@@ -118,13 +125,20 @@ func (s *PeminjamanService) Create(input CreatePeminjamanInput) (*models.Peminja
 		return nil, fmt.Errorf("%w: status must be one of aktif, selesai, melewati batas waktu", ErrPeminjamanInvalidInput)
 	}
 
+	actualReturnDate := "-"
+	if status == "selesai" {
+		actualReturnDate = time.Now().Format("2006-01-02")
+	}
+
 	data := &models.Peminjaman{
-		ItemInstanceID: input.ItemInstanceID,
-		NamaPeminjam:   namaPeminjam,
-		NomorTelepon:   nomorTelepon,
-		TanggalPinjam:  tanggalPinjam,
-		TanggalKembali: tanggalKembali,
-		Status:         status,
+		ItemInstanceID:   input.ItemInstanceID,
+		NamaPeminjam:     namaPeminjam,
+		Kelas:            kelas,
+		NomorTelepon:     nomorTelepon,
+		TanggalPinjam:    tanggalPinjam,
+		TanggalKembali:   tanggalKembali,
+		Status:           status,
+		ActualReturnDate: actualReturnDate,
 	}
 
 	// Status 'aktif' dan 'melewati batas waktu' berarti barang sedang dipinjam.
@@ -198,6 +212,14 @@ func (s *PeminjamanService) Update(id uint, input UpdatePeminjamanInput) (*model
 		data.NamaPeminjam = namaPeminjam
 	}
 
+	if input.Kelas != nil {
+		kelas := strings.TrimSpace(*input.Kelas)
+		if kelas == "" {
+			return nil, fmt.Errorf("%w: kelas is required", ErrPeminjamanInvalidInput)
+		}
+		data.Kelas = kelas
+	}
+
 	if input.NomorTelepon != nil {
 		nomorTelepon := strings.TrimSpace(*input.NomorTelepon)
 		if nomorTelepon == "" {
@@ -237,6 +259,10 @@ func (s *PeminjamanService) Update(id uint, input UpdatePeminjamanInput) (*model
 		}
 
 		data.Status = status
+
+		if status == "selesai" && (data.ActualReturnDate == "-" || data.ActualReturnDate == "") {
+			data.ActualReturnDate = time.Now().Format("2006-01-02")
+		}
 	}
 
 	// Jalankan dalam transaksi: update peminjaman + (kondisional) update status item_instance.

@@ -15,7 +15,7 @@ func NewKelasRepository(db *gorm.DB) *KelasRepository {
 }
 
 func (r *KelasRepository) List(kelas *[]models.Kelas) error {
-	return r.db.Order("id ASC").Find(kelas).Error
+	return r.db.Preload("Jurusan").Order("id ASC").Find(kelas).Error
 }
 
 func (r *KelasRepository) Create(kelas *models.Kelas) error {
@@ -23,7 +23,7 @@ func (r *KelasRepository) Create(kelas *models.Kelas) error {
 }
 
 func (r *KelasRepository) FindByID(id uint, kelas *models.Kelas) error {
-	return r.db.First(kelas, id).Error
+	return r.db.Preload("Jurusan").First(kelas, id).Error
 }
 
 func (r *KelasRepository) Update(kelas *models.Kelas) error {

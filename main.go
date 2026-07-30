@@ -30,15 +30,15 @@ func main() {
 	authService := services.NewAuthService(userRepository, cfg.JWTSecret)
 	authHandler := handlers.NewAuthHandler(authService)
 
-	// Kelas
-	kelasRepository := repositories.NewKelasRepository(db)
-	kelasService := services.NewKelasService(kelasRepository)
-	kelasHandler := handlers.NewKelasHandler(kelasService)
-
 	// Jurusan
 	jurusanRepository := repositories.NewJurusanRepository(db)
 	jurusanService := services.NewJurusanService(jurusanRepository)
 	jurusanHandler := handlers.NewJurusanHandler(jurusanService)
+
+	// Kelas
+	kelasRepository := repositories.NewKelasRepository(db)
+	kelasService := services.NewKelasService(kelasRepository, jurusanRepository)
+	kelasHandler := handlers.NewKelasHandler(kelasService)
 
 	// User
 	userService := services.NewUserService(userRepository)

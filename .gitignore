@@ -7,3 +7,8 @@ tmp/
 *.exe
 *.test
 .txt
+
+# Environment: simpan nilai rahasia hanya secara lokal / di server.
+# .env.example TIDAK di-ignore agar bisa dijadikan dokumentasi.
+.env
+!.env.example

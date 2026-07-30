@@ -9,19 +9,22 @@ import (
 )
 
 type CreateKelasInput struct {
-	Kelas string `json:"kelas"`
+	JurusanID uint   `json:"id_jurusan"`
+	Kelas     string `json:"kelas"`
 }
 
 type UpdateKelasInput struct {
-	Kelas string `json:"kelas"`
+	JurusanID *uint   `json:"id_jurusan"`
+	Kelas     *string `json:"kelas"`
 }
 
 type KelasService struct {
-	repo *repositories.KelasRepository
+	repo        *repositories.KelasRepository
+	jurusanRepo *repositories.JurusanRepository
 }
 
-func NewKelasService(repo *repositories.KelasRepository) *KelasService {
-	return &KelasService{repo: repo}
+func NewKelasService(repo *repositories.KelasRepository, jurusanRepo *repositories.JurusanRepository) *KelasService {
+	return &KelasService{repo: repo, jurusanRepo: jurusanRepo}
 }
 
 func (s *KelasService) List() ([]models.Kelas, error) {
@@ -34,12 +37,21 @@ func (s *KelasService) List() ([]models.Kelas, error) {
 }
 
 func (s *KelasService) Create(input CreateKelasInput) (*models.Kelas, error) {
+	if input.JurusanID == 0 {
+		return nil, fmt.Errorf("id_jurusan is required")
+	}
+
+	var jurusan models.Jurusan
+	if err := s.jurusanRepo.FindByID(input.JurusanID, &jurusan); err != nil {
+		return nil, fmt.Errorf("jurusan not found")
+	}
+
 	kelas := strings.TrimSpace(input.Kelas)
 	if kelas == "" {
 		return nil, fmt.Errorf("kelas is required")
 	}
 
-	data := &models.Kelas{Kelas: kelas}
+	data := &models.Kelas{JurusanID: input.JurusanID, Kelas: kelas}
 	if err := s.repo.Create(data); err != nil {
 		return nil, err
 	}
@@ -62,12 +74,26 @@ func (s *KelasService) Update(id uint, input UpdateKelasInput) (*models.Kelas, e
 		return nil, err
 	}
 
-	kelas := strings.TrimSpace(input.Kelas)
-	if kelas == "" {
-		return nil, fmt.Errorf("kelas is required")
+	if input.JurusanID != nil {
+		if *input.JurusanID == 0 {
+			return nil, fmt.Errorf("id_jurusan is required")
+		}
+
+		var jurusan models.Jurusan
+		if err := s.jurusanRepo.FindByID(*input.JurusanID, &jurusan); err != nil {
+			return nil, fmt.Errorf("jurusan not found")
+		}
+		data.JurusanID = *input.JurusanID
 	}
 
-	data.Kelas = kelas
+	if input.Kelas != nil {
+		kelas := strings.TrimSpace(*input.Kelas)
+		if kelas == "" {
+			return nil, fmt.Errorf("kelas is required")
+		}
+		data.Kelas = kelas
+	}
+
 	if err := s.repo.Update(data); err != nil {
 		return nil, err
 	}
