@@ -84,6 +84,7 @@ func (s *LaborService) Update(id uint, input UpdateLaborInput) (*models.Labor, e
 			return nil, fmt.Errorf("jurusan not found")
 		}
 		data.JurusanID = *input.JurusanID
+		data.Jurusan = jurusan
 	}
 
 	if input.Labor != nil {

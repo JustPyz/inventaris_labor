@@ -84,6 +84,7 @@ func (s *KelasService) Update(id uint, input UpdateKelasInput) (*models.Kelas, e
 			return nil, fmt.Errorf("jurusan not found")
 		}
 		data.JurusanID = *input.JurusanID
+		data.Jurusan = jurusan
 	}
 
 	if input.Kelas != nil {

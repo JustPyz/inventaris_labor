@@ -85,9 +85,9 @@ func New(
 			// /jurusan — admin: CRUD
 			jurusan := protected.Group("/jurusan")
 			{
-				jurusan.GET("", middlewares.RequireRole("admin", "kabeng"), jurusanHandler.List)
+				jurusan.GET("", middlewares.RequireRole("admin", "kabeng", "guru"), jurusanHandler.List)
 				jurusan.POST("", middlewares.RequireRole("admin"), jurusanHandler.Create)
-				jurusan.GET("/:id", middlewares.RequireRole("admin", "kabeng"), jurusanHandler.Get)
+				jurusan.GET("/:id", middlewares.RequireRole("admin", "kabeng", "guru"), jurusanHandler.Get)
 				jurusan.PUT("/:id", middlewares.RequireRole("admin"), jurusanHandler.Update)
 				jurusan.DELETE("/:id", middlewares.RequireRole("admin"), jurusanHandler.Delete)
 			}
