@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"invela-be/internal/config"
 	"invela-be/internal/models"
 
 	"github.com/glebarez/sqlite"
@@ -13,13 +14,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func Open(dbPath string) (*gorm.DB, error) {
-	dir := filepath.Dir(dbPath)
+func Open(cfg config.Config) (*gorm.DB, error) {
+	dir := filepath.Dir(cfg.DBPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("create database directory: %w", err)
 	}
 
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(cfg.DBPath), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite database: %w", err)
 	}
@@ -35,6 +36,11 @@ func Open(dbPath string) (*gorm.DB, error) {
 	if err := db.AutoMigrate(&models.Jurusan{}); err != nil {
 		return nil, fmt.Errorf("auto migrate jurusan: %w", err)
 	}
+
+	// Drop the old unique index on username before migrating User.
+	// The new model uses a composite unique index on (username, deleted_at)
+	// to allow re-creating soft-deleted usernames.
+	db.Exec("DROP INDEX IF EXISTS idx_users_username")
 
 	if err := db.AutoMigrate(&models.User{}); err != nil {
 		return nil, fmt.Errorf("auto migrate user: %w", err)
@@ -84,7 +90,7 @@ func Open(dbPath string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("seed roles: %w", err)
 	}
 
-	if err := seedAdminUser(db); err != nil {
+	if err := seedAdminUser(db, cfg); err != nil {
 		return nil, fmt.Errorf("seed admin user: %w", err)
 	}
 
@@ -113,9 +119,9 @@ func seedRoles(db *gorm.DB) error {
 	return nil
 }
 
-func seedAdminUser(db *gorm.DB) error {
+func seedAdminUser(db *gorm.DB, cfg config.Config) error {
 	var count int64
-	db.Model(&models.User{}).Where("username = ?", "admin@smkn4pyk.com").Count(&count)
+	db.Model(&models.User{}).Where("username = ?", cfg.AdminUsername).Count(&count)
 	if count > 0 {
 		return nil // sudah ada
 	}
@@ -125,13 +131,13 @@ func seedAdminUser(db *gorm.DB) error {
 		return fmt.Errorf("find admin role: %w", err)
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(cfg.AdminPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("hash admin password: %w", err)
 	}
 
 	admin := &models.User{
-		Username:     "admin@smkn4pyk.com",
+		Username:     cfg.AdminUsername,
 		PasswordHash: string(hash),
 		RoleID:       adminRole.ID,
 	}
@@ -140,7 +146,7 @@ func seedAdminUser(db *gorm.DB) error {
 		return fmt.Errorf("create admin user: %w", err)
 	}
 
-	log.Println("Seeded admin user (username: admin@smkn4pyk.com, password: admin123)")
+	log.Printf("Seeded admin user (username: %s)\n", cfg.AdminUsername)
 	return nil
 }
 
